@@ -5,7 +5,10 @@ import "package:path/path.dart" as p;
 
 import "../core/cache_store.dart";
 import "../core/exit_codes.dart";
+import "../core/fs_copy.dart";
+import "../core/gitignore_env.dart";
 import "../core/generator_client.dart";
+import "../core/platforms.dart";
 import "../core/pubspec_sanitize.dart";
 import "../core/server_client.dart";
 import "../core/zip_apply.dart";
@@ -29,16 +32,21 @@ class CreateCommand {
     required Directory? cacheDir,
   }) async {
     Directory? staging;
+    Directory? flutterSeed;
+
     try {
       final server = await ServerClient(endpoint: endpoint).fetchConfig();
       if (server.generatorVersion == "bundled") {
         stderr.writeln(
             "Using bundled defaults (server /api/config not available).");
       }
+
       final wizard = Wizard(
-          prompt:
-              Prompt(stdout: stdout, stderr: stderr, stdin: stdin, yes: yes));
-      final config = wizard.run(server);
+        prompt: Prompt(stdout: stdout, stderr: stderr, stdin: stdin, yes: yes),
+      );
+      final result = wizard.run(server);
+      final config = result.config;
+      final platforms = result.platforms;
 
       await outDir.create(recursive: true);
       final configFile = File(p.join(outDir.path, "flutterinit.json"));
@@ -48,12 +56,60 @@ class CreateCommand {
         return ExitCodes.io;
       }
 
+      final flutterOk = await _flutterAvailable();
+      if (!flutterOk) {
+        stderr.writeln("flutter not found; cannot generate platform folders.");
+        return ExitCodes.unavailable;
+      }
+
+      flutterSeed =
+          await Directory.systemTemp.createTemp("flutterinit_flutter_");
+      final packageId = (config["packageId"] as String?) ?? "com.example.app";
+      final org = deriveOrgFromPackageId(packageId);
+      final projectName =
+          (config["appName"] as String?) ?? p.basename(outDir.path);
+      final description = (config["description"] as String?) ?? "";
+
+      final args = flutterCreateArgs(
+        outDir: flutterSeed.path,
+        projectName: projectName,
+        org: org,
+        description: description,
+        platforms: platforms,
+      );
+
+      final flutterCreate =
+          await Process.run("flutter", args, runInShell: true);
+      stdout.write(flutterCreate.stdout);
+      stderr.write(flutterCreate.stderr);
+      if (flutterCreate.exitCode != 0) {
+        return ExitCodes.software;
+      }
+
       final encoder = const JsonEncoder.withIndent("  ");
       await configFile.writeAsString("${encoder.convert({
             "\$schema": "flutterinit",
             "generatorVersion": server.generatorVersion,
+            "cli": {"platforms": platforms},
             "config": config,
           })}\n");
+
+      final metadata = File(p.join(flutterSeed.path, ".metadata"));
+      if (await metadata.exists()) {
+        await metadata.copy(p.join(outDir.path, ".metadata"));
+      }
+
+      for (final platform in platforms) {
+        final src = Directory(p.join(flutterSeed.path, platform));
+        if (!await src.exists()) continue;
+        final dest = Directory(p.join(outDir.path, platform));
+        if (await dest.exists() && force) {
+          await dest.delete(recursive: true);
+        }
+        if (!await dest.exists()) {
+          await copyDirectory(src, dest);
+        }
+      }
 
       final client = GeneratorClient(
           endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
@@ -75,30 +131,33 @@ class CreateCommand {
         return ExitCodes.io;
       }
 
-      await applyStaging(stagingDir: staging, outDir: outDir, force: true);
+      await applyStaging(stagingDir: staging, outDir: outDir, force: force);
       stdout.writeln("Generated project at ${p.normalize(outDir.path)}");
 
-      final sanitize = await sanitizePubspecDuplicates(File(p.join(outDir.path, "pubspec.yaml")));
+      final sanitize = await sanitizePubspecDuplicates(
+          File(p.join(outDir.path, "pubspec.yaml")));
       if (sanitize.changed) {
-        stderr.writeln("Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
+        stderr.writeln(
+            "Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
+      }
+
+      final usesDotenv = await projectUsesDotenv(outDir);
+      await updateGitignore(outDir, includeDotenv: usesDotenv);
+      if (usesDotenv) {
+        await ensureEnvFile(outDir);
       }
 
       if (pubGet) {
-        final flutterOk = await _flutterAvailable();
-        if (!flutterOk) {
-          stderr.writeln("flutter not found; skipping flutter pub get.");
-        } else {
-          final result = await Process.run(
-            "flutter",
-            ["pub", "get"],
-            workingDirectory: outDir.path,
-            runInShell: true,
-          );
-          stdout.write(result.stdout);
-          stderr.write(result.stderr);
-          if (result.exitCode != 0) {
-            return ExitCodes.software;
-          }
+        final pubGetResult = await Process.run(
+          "flutter",
+          ["pub", "get"],
+          workingDirectory: outDir.path,
+          runInShell: true,
+        );
+        stdout.write(pubGetResult.stdout);
+        stderr.write(pubGetResult.stderr);
+        if (pubGetResult.exitCode != 0) {
+          return ExitCodes.software;
         }
       }
 
@@ -108,6 +167,7 @@ class CreateCommand {
       return ExitCodes.software;
     } finally {
       await staging?.delete(recursive: true);
+      await flutterSeed?.delete(recursive: true);
     }
   }
 

@@ -3,6 +3,7 @@ import "dart:io";
 import "package:path/path.dart" as p;
 
 import "../core/exit_codes.dart";
+import "../core/gitignore_env.dart";
 import "../core/pubspec_sanitize.dart";
 import "../core/zip_apply.dart";
 
@@ -48,12 +49,19 @@ class ApplyCommand {
       }
 
       await applyStaging(stagingDir: staging, outDir: outDir, force: force);
-      final result = await sanitizePubspecDuplicates(
+      final sanitize = await sanitizePubspecDuplicates(
           File(p.join(outDir.path, "pubspec.yaml")));
-      if (result.changed) {
+      if (sanitize.changed) {
         stderr.writeln(
-            "Fixed duplicate keys in pubspec.yaml (${result.removedKeys.join(", ")}).");
+            "Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
       }
+
+      final usesDotenv = await projectUsesDotenv(outDir);
+      await updateGitignore(outDir, includeDotenv: usesDotenv);
+      if (usesDotenv) {
+        await ensureEnvFile(outDir);
+      }
+
       stdout.writeln("Wrote files into ${p.normalize(outDir.path)}");
       return ExitCodes.success;
     } catch (e) {
