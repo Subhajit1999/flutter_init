@@ -33,6 +33,11 @@ class Cli {
       return ExitCodes.success;
     }
 
+    if (parsed["version"] == true) {
+      stdout.writeln("flutterinit_cli 0.1.0");
+      return ExitCodes.success;
+    }
+
     final command = parsed.command;
     if (command == null) {
       stdout.writeln(usageText(parser));
@@ -67,6 +72,7 @@ class Cli {
           force: command["force"] as bool,
           yes: command["yes"] as bool,
           pubGet: command["pub-get"] as bool,
+          platformsRaw: command["platforms"] as String,
           cacheDir: cacheDir != null ? Directory(cacheDir) : null,
         );
       case "generate":
@@ -105,6 +111,7 @@ class Cli {
 
   ArgParser _buildParser() {
     final parser = ArgParser()..addFlag("help", abbr: "h", negatable: false);
+    parser.addFlag("version", negatable: false);
 
     parser.addCommand("doctor")
       ..addFlag("verbose", defaultsTo: false)
@@ -124,6 +131,7 @@ class Cli {
       ..addFlag("yes", abbr: "y", defaultsTo: false)
       ..addFlag("force", defaultsTo: false)
       ..addFlag("pub-get", defaultsTo: true)
+      ..addOption("platforms", defaultsTo: "android,ios")
       ..addOption("endpoint",
           defaultsTo: "https://flutterinit.com/api/generate")
       ..addOption("cache-dir")

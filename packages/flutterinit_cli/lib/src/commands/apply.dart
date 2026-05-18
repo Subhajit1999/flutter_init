@@ -2,6 +2,7 @@ import "dart:io";
 
 import "package:path/path.dart" as p;
 
+import "../core/assets_from_pubspec.dart";
 import "../core/exit_codes.dart";
 import "../core/gitignore_env.dart";
 import "../core/pubspec_sanitize.dart";
@@ -55,6 +56,8 @@ class ApplyCommand {
         stderr.writeln(
             "Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
       }
+
+      await ensureAssetsFromPubspec(outDir);
 
       final usesDotenv = await projectUsesDotenv(outDir);
       await updateGitignore(outDir, includeDotenv: usesDotenv);

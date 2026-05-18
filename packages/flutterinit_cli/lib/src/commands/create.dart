@@ -4,6 +4,7 @@ import "dart:io";
 import "package:path/path.dart" as p;
 
 import "../core/cache_store.dart";
+import "../core/assets_from_pubspec.dart";
 import "../core/exit_codes.dart";
 import "../core/fs_copy.dart";
 import "../core/gitignore_env.dart";
@@ -29,6 +30,7 @@ class CreateCommand {
     required bool force,
     required bool yes,
     required bool pubGet,
+    required String platformsRaw,
     required Directory? cacheDir,
   }) async {
     Directory? staging;
@@ -44,9 +46,10 @@ class CreateCommand {
       final wizard = Wizard(
         prompt: Prompt(stdout: stdout, stderr: stderr, stdin: stdin, yes: yes),
       );
-      final result = wizard.run(server);
+      final result = wizard.run(server, defaultPlatformsRaw: platformsRaw);
       final config = result.config;
       final platforms = result.platforms;
+      stderr.writeln("Platforms: ${platforms.join(", ")}");
 
       await outDir.create(recursive: true);
       final configFile = File(p.join(outDir.path, "flutterinit.json"));
@@ -139,6 +142,11 @@ class CreateCommand {
       if (sanitize.changed) {
         stderr.writeln(
             "Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
+        final assetsResult = await ensureAssetsFromPubspec(outDir);
+        if (assetsResult.createdDirs.isNotEmpty) {
+          stderr.writeln(
+              "Created asset dirs: ${assetsResult.createdDirs.join(", ")}");
+        }
       }
 
       final usesDotenv = await projectUsesDotenv(outDir);

@@ -16,12 +16,12 @@ class Wizard {
 
   final Prompt prompt;
 
-  WizardResult run(ServerConfig server) {
+  WizardResult run(ServerConfig server, {required String defaultPlatformsRaw}) {
     final cfg = deepCopyMap(server.defaultConfig);
 
     final platformsRaw = prompt.askText(
       label: "Platforms (comma separated)",
-      defaultValue: "android,ios",
+      defaultValue: defaultPlatformsRaw,
       validate: (v) {
         try {
           parsePlatforms(v);
