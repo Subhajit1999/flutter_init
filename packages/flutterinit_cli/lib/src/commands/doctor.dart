@@ -1,5 +1,8 @@
 import "dart:io";
 
+import "package:http/http.dart" as http;
+
+import "../core/endpoints.dart";
 import "../core/exit_codes.dart";
 
 class DoctorCommand {
@@ -8,9 +11,14 @@ class DoctorCommand {
   final Stdout stdout;
   final Stdout stderr;
 
-  Future<int> run({required bool verbose}) async {
+  Future<int> run({required bool verbose, required Uri endpoint}) async {
     final dartOk = await _check("dart", ["--version"], verbose: verbose);
-    final flutterOk = await _check("flutter", ["--version"], verbose: verbose, required: false);
+    final flutterOk = await _check(
+      "flutter",
+      ["--version"],
+      verbose: verbose,
+      required: false,
+    );
 
     if (!dartOk) return ExitCodes.unavailable;
 
@@ -18,7 +26,20 @@ class DoctorCommand {
     if (flutterOk) {
       stdout.writeln("flutter: ok");
     } else {
-      stdout.writeln("flutter: not found (pub get steps will be skipped unless flutter is installed)");
+      stdout.writeln(
+          "flutter: not found (pub get steps will be skipped unless flutter is installed)");
+    }
+
+    try {
+      final url = resolveConfigEndpoint(endpoint);
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        stdout.writeln("endpoint: ok ($url)");
+      } else {
+        stdout.writeln("endpoint: unavailable ($url) ${response.statusCode}");
+      }
+    } catch (e) {
+      stdout.writeln("endpoint: unavailable ($endpoint) $e");
     }
 
     return ExitCodes.success;

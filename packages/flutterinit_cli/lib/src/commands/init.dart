@@ -7,6 +7,7 @@ import "package:path/path.dart" as p;
 import "../core/endpoints.dart";
 import "../core/exit_codes.dart";
 import "../core/server_config.dart";
+import "../core/server_client.dart";
 
 class InitCommand {
   InitCommand({required this.stdout, required this.stderr});
@@ -22,18 +23,22 @@ class InitCommand {
     try {
       final configUrl = resolveConfigEndpoint(endpoint);
       final response = await http.get(configUrl);
-      if (response.statusCode != 200) {
-        stderr.writeln("Failed to fetch defaults: ${response.statusCode}");
-        stderr.writeln(response.body);
-        return ExitCodes.unavailable;
+      ServerConfig serverConfig;
+      if (response.statusCode == 200) {
+        serverConfig = ServerConfig.fromJson(response.body);
+      } else {
+        serverConfig =
+            await ServerClient(endpoint: endpoint, allowFallback: true)
+                .fetchConfig();
+        stderr.writeln(
+            "Using bundled defaults (server /api/config returned ${response.statusCode}).");
       }
-
-      final serverConfig = ServerConfig.fromJson(response.body);
 
       await outDir.create(recursive: true);
       final file = File(p.join(outDir.path, "flutterinit.json"));
       if (await file.exists() && !force) {
-        stderr.writeln("flutterinit.json already exists. Use --force to overwrite.");
+        stderr.writeln(
+            "flutterinit.json already exists. Use --force to overwrite.");
         return ExitCodes.io;
       }
 

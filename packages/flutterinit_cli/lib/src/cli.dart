@@ -46,7 +46,7 @@ class Cli {
     switch (command.name) {
       case "doctor":
         return DoctorCommand(stdout: stdout, stderr: stderr)
-            .run(verbose: verbose);
+            .run(verbose: verbose, endpoint: endpoint);
       case "init":
         return InitCommand(stdout: stdout, stderr: stderr).run(
           endpoint: endpoint,

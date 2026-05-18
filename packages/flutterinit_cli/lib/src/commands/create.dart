@@ -12,7 +12,8 @@ import "../wizard/prompt.dart";
 import "../wizard/wizard.dart";
 
 class CreateCommand {
-  CreateCommand({required this.stdout, required this.stderr, required this.stdin});
+  CreateCommand(
+      {required this.stdout, required this.stderr, required this.stdin});
 
   final Stdout stdout;
   final Stdout stderr;
@@ -29,13 +30,20 @@ class CreateCommand {
     Directory? staging;
     try {
       final server = await ServerClient(endpoint: endpoint).fetchConfig();
-      final wizard = Wizard(prompt: Prompt(stdout: stdout, stderr: stderr, stdin: stdin, yes: yes));
+      if (server.generatorVersion == "bundled") {
+        stderr.writeln(
+            "Using bundled defaults (server /api/config not available).");
+      }
+      final wizard = Wizard(
+          prompt:
+              Prompt(stdout: stdout, stderr: stderr, stdin: stdin, yes: yes));
       final config = wizard.run(server);
 
       await outDir.create(recursive: true);
       final configFile = File(p.join(outDir.path, "flutterinit.json"));
       if (await configFile.exists() && !force) {
-        stderr.writeln("flutterinit.json already exists in ${outDir.path}. Use --force to overwrite.");
+        stderr.writeln(
+            "flutterinit.json already exists in ${outDir.path}. Use --force to overwrite.");
         return ExitCodes.io;
       }
 
@@ -46,7 +54,8 @@ class CreateCommand {
             "config": config,
           })}\n");
 
-      final client = GeneratorClient(endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
+      final client = GeneratorClient(
+          endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
       final zip = await client.generateZip(config: config, fonts: const []);
 
       staging = await Directory.systemTemp.createTemp("flutterinit_staging_");
@@ -54,7 +63,8 @@ class CreateCommand {
       final plan = await planApply(stagingDir: staging, outDir: outDir);
 
       if (plan.conflicts.isNotEmpty && !force) {
-        stderr.writeln("Conflicts (${plan.conflicts.length}). Use --force to overwrite:");
+        stderr.writeln(
+            "Conflicts (${plan.conflicts.length}). Use --force to overwrite:");
         for (final c in plan.conflicts.take(25)) {
           stderr.writeln("  $c");
         }
@@ -97,7 +107,8 @@ class CreateCommand {
 
   Future<bool> _flutterAvailable() async {
     try {
-      final result = await Process.run("flutter", ["--version"], runInShell: true);
+      final result =
+          await Process.run("flutter", ["--version"], runInShell: true);
       return result.exitCode == 0;
     } catch (_) {
       return false;
