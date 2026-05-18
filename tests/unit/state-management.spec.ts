@@ -74,6 +74,21 @@ describe("State Management", () => {
         })
     })
 
+    // ── GetX ────────────────────────────────────────────────────
+    describe("getx", () => {
+        let pubspec: string
+
+        beforeAll(async () => {
+            const files = await generateToMap(buildConfig({ ...base, stateManagement: "getx" }, MISC_DEFAULT))
+            pubspec = getPubspecContent(files)
+        })
+
+        it("includes get in pubspec exactly once", () => {
+            const matches = pubspec.match(/^\s+get:\s/mg) ?? []
+            expect(matches.length).toBe(1)
+        })
+    })
+
     // ── MobX ────────────────────────────────────────────────────
     describe("mobx", () => {
         let files: Map<string, string>

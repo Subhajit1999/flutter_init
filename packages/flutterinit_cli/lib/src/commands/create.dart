@@ -6,6 +6,7 @@ import "package:path/path.dart" as p;
 import "../core/cache_store.dart";
 import "../core/exit_codes.dart";
 import "../core/generator_client.dart";
+import "../core/pubspec_sanitize.dart";
 import "../core/server_client.dart";
 import "../core/zip_apply.dart";
 import "../wizard/prompt.dart";
@@ -76,6 +77,11 @@ class CreateCommand {
 
       await applyStaging(stagingDir: staging, outDir: outDir, force: true);
       stdout.writeln("Generated project at ${p.normalize(outDir.path)}");
+
+      final sanitize = await sanitizePubspecDuplicates(File(p.join(outDir.path, "pubspec.yaml")));
+      if (sanitize.changed) {
+        stderr.writeln("Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
+      }
 
       if (pubGet) {
         final flutterOk = await _flutterAvailable();

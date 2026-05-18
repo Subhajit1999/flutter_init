@@ -144,9 +144,7 @@ function buildTemplateContext(config: ScaffoldConfig): TemplateContext {
     const appSlug = config.appName.trim().replace(/\s+/g, "-").toLowerCase()
     const appSnake = config.appName.trim().replace(/\s+/g, "_").toLowerCase()
     let routerPackage: "go_router" | "auto_route" | "getx" | undefined
-    if (config.stateManagement === "getx") {
-        routerPackage = "getx"
-    } else if (config.navigation === "go_router") {
+    if (config.navigation === "go_router") {
         routerPackage = "go_router"
     } else if (config.navigation === "auto_route") {
         routerPackage = "auto_route"
@@ -395,4 +393,3 @@ async function zipDirectory(dir: string) {
 }
 
 export type { TemplateContext }
-

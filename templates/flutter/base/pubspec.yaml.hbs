@@ -16,8 +16,6 @@ dependencies:
   go_router: ^17.1.0
   {{else if (eq flags.routerPackage "auto_route")}}
   auto_route: ^11.1.0
-  {{else if (eq flags.routerPackage "getx")}}
-  get: ^4.7.3
   {{/if}}
 
   # Networking
@@ -44,7 +42,7 @@ dependencies:
   {{#if flags.isBloc}}
   flutter_bloc: ^9.1.1
   {{/if}}
-  {{#if flags.isGetX}}
+  {{#if (or flags.isGetX (eq flags.routerPackage "getx"))}}
   get: ^4.7.3
   {{/if}}
   {{#if flags.isProvider}}
