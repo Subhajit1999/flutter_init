@@ -20,10 +20,12 @@ class GeneratorClient {
   Future<File> generateZip({
     required Map<String, dynamic> config,
     required List<File> fonts,
+    String cacheSalt = "",
     File? outZip,
     bool verbose = false,
   }) async {
-    final cacheKey = await _cacheKey(config: config, fonts: fonts);
+    final cacheKey =
+        await _cacheKey(config: config, fonts: fonts, cacheSalt: cacheSalt);
     await cache.ensure();
     final cached = cache.zipForKey(cacheKey);
     if (await cached.exists()) {
@@ -51,7 +53,8 @@ class GeneratorClient {
     final streamed = await request.send();
     if (streamed.statusCode != 200) {
       final body = await streamed.stream.bytesToString();
-      throw HttpException("Generate failed: ${streamed.statusCode} $body", uri: generateUrl);
+      throw HttpException("Generate failed: ${streamed.statusCode} $body",
+          uri: generateUrl);
     }
 
     final target = outZip ?? cached;
@@ -74,14 +77,17 @@ class GeneratorClient {
   Future<String> _cacheKey({
     required Map<String, dynamic> config,
     required List<File> fonts,
+    required String cacheSalt,
   }) async {
     final configJson = jsonEncode(config);
     final fontSig = <String>[];
     for (final f in fonts) {
       final stat = await f.stat();
-      fontSig.add("${p.basename(f.path)}:${stat.size}:${stat.modified.millisecondsSinceEpoch}");
+      fontSig.add(
+          "${p.basename(f.path)}:${stat.size}:${stat.modified.millisecondsSinceEpoch}");
     }
     fontSig.sort();
-    return sha256Hex("$configJson|${fontSig.join("|")}");
+    return sha256Hex(
+        "${generateUrl.toString()}|$cacheSalt|$configJson|${fontSig.join("|")}");
   }
 }

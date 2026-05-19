@@ -23,6 +23,10 @@ export '../routing/app_bindings.dart';
 export '../services/services.dart';
 export '../shared/shared.dart';
 
+{{#if (or flags.isGetX (eq flags.routerPackage "getx"))}}
+export 'package:get/get.dart' hide GetContextExtensions;
+{{/if}}
+
 {{#if (eq architecture "layer-first")}}
 export '../presentation/screens/auth/login_screen.dart';
 export '../presentation/screens/auth/signup_screen.dart';

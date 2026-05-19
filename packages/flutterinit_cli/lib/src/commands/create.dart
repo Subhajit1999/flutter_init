@@ -116,7 +116,11 @@ class CreateCommand {
 
       final client = GeneratorClient(
           endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
-      final zip = await client.generateZip(config: config, fonts: const []);
+      final zip = await client.generateZip(
+        config: config,
+        fonts: const [],
+        cacheSalt: server.generatorVersion,
+      );
 
       staging = await Directory.systemTemp.createTemp("flutterinit_staging_");
       await extractZipToStaging(zipFile: zip, stagingDir: staging);
@@ -142,11 +146,12 @@ class CreateCommand {
       if (sanitize.changed) {
         stderr.writeln(
             "Fixed duplicate keys in pubspec.yaml (${sanitize.removedKeys.join(", ")}).");
-        final assetsResult = await ensureAssetsFromPubspec(outDir);
-        if (assetsResult.createdDirs.isNotEmpty) {
-          stderr.writeln(
-              "Created asset dirs: ${assetsResult.createdDirs.join(", ")}");
-        }
+      }
+
+      final assetsResult = await ensureAssetsFromPubspec(outDir);
+      if (assetsResult.createdDirs.isNotEmpty) {
+        stderr.writeln(
+            "Created asset dirs: ${assetsResult.createdDirs.join(", ")}");
       }
 
       final usesDotenv = await projectUsesDotenv(outDir);

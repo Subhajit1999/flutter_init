@@ -25,11 +25,13 @@ class GenerateCommand {
       }
 
       final cfg = await ConfigFile.read(configFile);
-      final client = GeneratorClient(endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
+      final client = GeneratorClient(
+          endpoint: endpoint, cache: CacheStore(baseDir: cacheDir));
 
       final zip = await client.generateZip(
         config: cfg.config,
         fonts: const [],
+        cacheSalt: cfg.generatorVersion ?? "",
         outZip: outZip,
         verbose: verbose,
       );

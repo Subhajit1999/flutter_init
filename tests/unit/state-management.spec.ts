@@ -77,15 +77,24 @@ describe("State Management", () => {
     // ── GetX ────────────────────────────────────────────────────
     describe("getx", () => {
         let pubspec: string
+        let packagesImports: string
+        let coreImports: string
 
         beforeAll(async () => {
             const files = await generateToMap(buildConfig({ ...base, stateManagement: "getx" }, MISC_DEFAULT))
             pubspec = getPubspecContent(files)
+            packagesImports = getFileContent(files, "packages_imports.dart") ?? ""
+            coreImports = getFileContent(files, "core_imports.dart") ?? ""
         })
 
         it("includes get in pubspec exactly once", () => {
             const matches = pubspec.match(/^\s+get:\s/mg) ?? []
             expect(matches.length).toBe(1)
+        })
+
+        it("exports get in imports barrels", () => {
+            expect(packagesImports).toContain("package:get/get.dart")
+            expect(coreImports).toContain("package:get/get.dart")
         })
     })
 

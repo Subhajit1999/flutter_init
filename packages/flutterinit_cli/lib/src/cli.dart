@@ -8,6 +8,7 @@ import "commands/doctor.dart";
 import "commands/generate.dart";
 import "commands/init.dart";
 import "core/exit_codes.dart";
+import "version.dart";
 
 class Cli {
   Cli({required this.stdout, required this.stderr, required this.stdin});
@@ -34,7 +35,7 @@ class Cli {
     }
 
     if (parsed["version"] == true) {
-      stdout.writeln("flutterinit_cli 0.1.0");
+      stdout.writeln("flutterinit_cli $cliVersion");
       return ExitCodes.success;
     }
 
@@ -110,8 +111,9 @@ class Cli {
   }
 
   ArgParser _buildParser() {
-    final parser = ArgParser()..addFlag("help", abbr: "h", negatable: false);
-    parser.addFlag("version", negatable: false);
+    final parser = ArgParser()
+      ..addFlag("help", abbr: "h", negatable: false)
+      ..addFlag("version", abbr: "V", negatable: false);
 
     parser.addCommand("doctor")
       ..addFlag("verbose", defaultsTo: false)
@@ -162,6 +164,7 @@ class Cli {
 String usageText(ArgParser parser) {
   final buffer = StringBuffer();
   buffer.writeln("flutterinit <command> [options]");
+  buffer.writeln("flutterinit --version");
   buffer.writeln("");
   buffer.writeln("Commands:");
   buffer.writeln("  doctor             Check local environment.");
